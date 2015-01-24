@@ -1,0 +1,14 @@
+[
+	{
+		"caption": "Pgcli - Run all",
+		"command": "pgcli_run_all"
+	},
+	{
+		"caption": "Pgcli - Open pgcli prompt",
+		"command": "pgcli_open_cli"
+	},
+	{
+		"caption": "Pgcli - Open a new sql file",
+		"command": "pgcli_new_sql_file"
+	}
+]

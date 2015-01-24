@@ -1,0 +1,27 @@
+{
+	// Use pgcli to for autocomplete? If false, standard sublime autocompletion is used
+	"pgcli_autocomplete": 			true,
+	
+	// List of python directories to add to python path so pgcli can be imported
+	"pgcli_dirs": 					[],
+	
+	// List of python site directories to add to python path so pgcli can be imported
+	"pgcli_site_dirs": 				[],
+	
+	// The path to the postgresql database. This may also be overridden in project-specific settings
+	"pgcli_url": 					"postgresql://",
+
+	// The command to send to os.system to open a pgcli command prompt
+	// {url} is automatically formatted with the appropriate database url
+	"pgcli_system_cmd":             "pgcli {url}",
+	
+	// Controls log level of PgcliSublime logger
+	"pgcli_sublime_log_level": 		"WARNING",
+	
+	// Controls log level of pgcli
+	"pgcli_log_level": 				"WARNING",
+	
+	// Controls the console handler
+	"pgcli_console_log_level":      "WARNING"
+
+}

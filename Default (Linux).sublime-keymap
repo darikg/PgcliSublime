@@ -1,0 +1,14 @@
+[
+	{
+		"keys": 	["alt+enter"],
+		"command": 	"pgcli_run_all"
+	},
+	{
+	    "keys":     ["ctrl+f12"],
+	    "command":  "pgcli_open_cli"
+	},
+	{
+	    "keys":     ["ctrl+alt+shift+n"],
+	    "command":  "pgcli_new_sql_file"
+	}
+]
