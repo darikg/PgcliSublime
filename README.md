@@ -7,7 +7,10 @@ pgcli running in Python 3.3. (This is the version of python shipped with
 Sublime Text 3). I recommend installing pgcli in a virtual environment.
 
 ## Installation
-Clone or download this repo into a subdirectory in your ST3 /Packages directory.
+Via [Package Control](https://packagecontrol.io/): 
+```Preferences | Package Control | Install Package | PgcliSublime```
+
+Via Git: Clone this repo into a subdirectory in your ST3 /Packages directory.
 
 ## Configuration
 
