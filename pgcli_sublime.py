@@ -128,8 +128,9 @@ class PgcliNewSqlFileCommand(sublime_plugin.WindowCommand):
         """Open a new file with syntax defaulted to SQL"""
         logger.debug('PgcliNewSqlFile')
         self.window.run_command('new_file')
-        self.window.active_view().set_syntax_file(
-            'Packages/SQL/SQL.tmLanguage')
+        view = self.window.active_view()
+        view.set_syntax_file('Packages/SQL/SQL.tmLanguage')
+        check_pgcli(view)
 
 
 def init_logging():
