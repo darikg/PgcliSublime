@@ -95,7 +95,8 @@ class PgcliRunAllCommand(sublime_plugin.TextCommand):
         logger.debug('Command: PgcliExecute: %r', sql)
         results = pgcli.pgexecute.run(sql)
         for rows, headers, status in results:
-            print('\n'.join(format_output(rows, headers, status)))
+            out = format_output(rows, headers, status, pgcli.table_format)
+            print('\n'.join(out))
 
         # Make sure the console is visiblle
         sublime.active_window().run_command('show_panel', {'panel': 'console'})
