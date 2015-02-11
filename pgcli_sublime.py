@@ -171,17 +171,21 @@ def check_pgcli(view):
     """Check if a pgcli connection for the view exists, or request one"""
 
     if not is_sql(view):
+        view.set_status('pgcli', '')
         return
 
     url = get(view, 'pgcli_url')
     if not url:
+        view.set_status('pgcli', '')
         logger.debug('Empty pgcli url %r', url)
         return
 
     if url in pgclis:
+        view.set_status('pgcli', pgcli_id(pgclis[url]))
         logger.debug('Already connected to %r', url)
         return
 
+    view.set_status('pgcli', 'Connecting: ' + url)
     url_requests.put(url)
 
 
@@ -216,3 +220,13 @@ def monitor_connection_requests():
         logger.debug('Smart completions: %r', pgcli.completer.smart_completion)
 
         pgclis[url] = pgcli
+
+        # Now that we've connected, update status in all open views
+        for view in sublime.active_window().views():
+            check_pgcli(view)
+
+
+def pgcli_id(pgcli):
+    pge = pgcli.pgexecute
+    user, host = pge.user, pge.host
+    return '{}@{}'.format(user, host)
