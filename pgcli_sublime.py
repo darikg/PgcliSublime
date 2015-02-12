@@ -7,6 +7,7 @@ import site
 from queue import Queue
 
 pgclis = {}  # Dict mapping urls to pgcli objects
+MONITOR_URL_REQUESTS = False
 url_requests = Queue()  # A queue of database urls to asynchronously connect to
 
 logger = logging.getLogger('pgcli_sublime')
@@ -40,12 +41,20 @@ def plugin_loaded():
 
     # All database connections are done in a separate thread so sublime doesn't
     # hang waiting for a connection to timeout or whatever
+    global MONITOR_URL_REQUESTS
+    MONITOR_URL_REQUESTS = True
     sublime.set_timeout_async(monitor_connection_requests, 0)
 
 
 def plugin_unloaded():
+    global MONITOR_URL_REQUESTS
+    MONITOR_URL_REQUESTS = False
+
     global pgclis
     pgclis = {}
+
+    global url_requests
+    url_requests = Queue()
 
 
 class PgcliPlugin(sublime_plugin.EventListener):
@@ -231,8 +240,12 @@ def get_entire_view_text(view):
 
 def monitor_connection_requests():
 
-    while True:
-        url = url_requests.get(block=True)
+    while MONITOR_URL_REQUESTS:
+        if url_requests.empty():
+            continue
+
+        url = url_requests.get(block=False)
+
         if url in pgclis:
             # already connected
             continue
