@@ -35,6 +35,9 @@ def plugin_loaded():
     global format_output
     from pgcli.main import format_output
 
+    global psycopg2
+    import psycopg2
+
     # All database connections are done in a separate thread so sublime doesn't
     # hang waiting for a connection to timeout or whatever
     sublime.set_timeout_async(monitor_connection_requests, 0)
@@ -93,13 +96,25 @@ class PgcliRunAllCommand(sublime_plugin.TextCommand):
             return
 
         panel = get_output_panel(self.view)
-
         logger.debug('Command: PgcliExecute: %r', sql)
-        results = pgcli.pgexecute.run(sql)
-        for rows, headers, status in results:
-            out = format_output(rows, headers, status, pgcli.table_format)
-            out = '\n'.join(out)
-            panel.run_command('append', {'characters': out, 'pos': 0})
+        out = ''
+
+        try:
+            results = pgcli.pgexecute.run(sql)
+            out = []
+
+            for rows, headers, status in results:
+                fmt = format_output(rows, headers, status, pgcli.table_format)
+                out.append('\n'.join(fmt))
+
+            out = '\n\n'.join(out)
+            logger.debug('Results: %r', out)
+
+        except psycopg2.ProgrammingError as e:
+            out = e.pgerror
+
+        # Write to panel
+        panel.run_command('append', {'characters': out, 'pos': 0})
 
         # Make sure the output panel is visiblle
         sublime.active_window().run_command('pgcli_show_output_panel')
