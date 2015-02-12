@@ -4,6 +4,10 @@
 		"command": 	"pgcli_run_all"
 	},
 	{
+		"keys": 	["alt+`"],
+		"command": 	"pgcli_show_output_panel"
+	},
+	{
 	    "keys":     ["ctrl+f12"],
 	    "command":  "pgcli_open_cli"
 	},

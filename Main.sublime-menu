@@ -9,6 +9,7 @@
                 "children":
                 [
                     {"command": "pgcli_run_all"},
+                    {"command": "pgcli_show_output_panel"},
                     {"command": "pgcli_open_cli"},
                     {"command": "pgcli_new_sql_file"}
                 ]

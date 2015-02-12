@@ -92,14 +92,27 @@ class PgcliRunAllCommand(sublime_plugin.TextCommand):
         if not pgcli:
             return
 
+        panel = get_output_panel(self.view)
+
         logger.debug('Command: PgcliExecute: %r', sql)
         results = pgcli.pgexecute.run(sql)
         for rows, headers, status in results:
             out = format_output(rows, headers, status, pgcli.table_format)
-            print('\n'.join(out))
+            out = '\n'.join(out)
+            panel.run_command('append', {'characters': out, 'pos': 0})
 
-        # Make sure the console is visiblle
-        sublime.active_window().run_command('show_panel', {'panel': 'console'})
+        # Make sure the output panel is visiblle
+        sublime.active_window().run_command('pgcli_show_output_panel')
+
+
+class PgcliShowOutputPanelCommand(sublime_plugin.TextCommand):
+    def description(self):
+        return 'Show the output panel'
+
+    def run(self, edit):
+        logger.debug('PgcliShowOutputPanelCommand')
+        sublime.active_window().run_command('show_panel',
+                {'panel': 'output.' + output_panel_name(self.view)})
 
 
 class PgcliOpenCliCommand(sublime_plugin.TextCommand):
@@ -231,3 +244,11 @@ def pgcli_id(pgcli):
     pge = pgcli.pgexecute
     user, host = pge.user, pge.host
     return '{}@{}'.format(user, host)
+
+
+def output_panel_name(view):
+    return '__pgcli__' + (view.file_name() or 'untitled')
+
+
+def get_output_panel(view):
+    return view.window().create_output_panel(output_panel_name(view))
