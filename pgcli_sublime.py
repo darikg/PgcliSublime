@@ -4,6 +4,7 @@ import logging
 import sys
 import os
 import site
+import traceback
 from queue import Queue
 
 pgclis = {}  # Dict mapping urls to pgcli objects
@@ -119,7 +120,7 @@ class PgcliRunAllCommand(sublime_plugin.TextCommand):
             out = '\n\n'.join(out)
             logger.debug('Results: %r', out)
 
-        except psycopg2.ProgrammingError as e:
+        except psycopg2.Error as e:
             out = e.pgerror
 
         # Write to panel
@@ -219,8 +220,12 @@ def check_pgcli(view):
         return
 
     if url in pgclis:
-        view.set_status('pgcli', pgcli_id(pgclis[url]))
-        logger.debug('Already connected to %r', url)
+        pgcli = pgclis[url]
+        if pgcli is None:
+            view.set_status('pgcli', 'ERROR CONNECTING TO {}'.format(url))
+        else:
+            view.set_status('pgcli', pgcli_id(pgcli))
+            logger.debug('Already connected to %r', url)
         return
 
     view.set_status('pgcli', 'Connecting: ' + url)
@@ -239,6 +244,7 @@ def get_entire_view_text(view):
 
 
 def monitor_connection_requests():
+    global MONITOR_URL_REQUESTS
 
     while MONITOR_URL_REQUESTS:
         if url_requests.empty():
@@ -250,16 +256,23 @@ def monitor_connection_requests():
             # already connected
             continue
 
-        logger.debug('Connecting to %r', url)
-        pgcli = PGCli(never_passwd_prompt=True)
-        pgcli.connect_uri(url)
-        logger.debug('Connected to %r', url)
+        try:
+            logger.debug('Connecting to %r', url)
+            pgcli = PGCli(never_passwd_prompt=True)
+            pgcli.connect_uri(url)
+            logger.debug('Connected to %r', url)
 
-        logger.debug('Refreshing completions')
-        pgcli.refresh_completions()
-        logger.debug('Refreshed completions')
+            logger.debug('Refreshing completions')
+            pgcli.refresh_completions()
+            logger.debug('Refreshed completions')
 
-        logger.debug('Smart completions: %r', pgcli.completer.smart_completion)
+            logger.debug('Smart completions: %r',
+                         pgcli.completer.smart_completion)
+
+        except Exception as e:
+            logger.error('Error connecting to pgcli')
+            logger.error('traceback: %s', traceback.format_exc())
+            pgcli = None
 
         pgclis[url] = pgcli
 
