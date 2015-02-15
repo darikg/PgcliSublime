@@ -12,6 +12,10 @@
 		"command": "pgcli_open_cli"
 	},
 	{
+		"caption": "Pgcli - Open pgcli SublimeREPL",
+		"command": "pgcli_new_sublime_repl"
+	},
+	{
 		"caption": "Pgcli - Open a new sql file",
 		"command": "pgcli_new_sql_file"
 	}

@@ -8,6 +8,12 @@ import traceback
 import queue
 import datetime
 
+try:
+    from SublimeREPL.repls import Repl
+    SUBLIME_REPL_AVAIL = True
+except ImportError:
+    SUBLIME_REPL_AVAIL = False
+
 pgclis = {}  # Dict mapping urls to pgcli objects
 MONITOR_URL_REQUESTS = False
 url_requests = queue.Queue()  # A queue of database urls to asynchronously connect to
@@ -111,13 +117,7 @@ class PgcliRunAllCommand(sublime_plugin.TextCommand):
 
         try:
             results = pgcli.pgexecute.run(sql)
-            out = []
-
-            for rows, headers, status in results:
-                fmt = format_output(rows, headers, status, pgcli.table_format)
-                out.append('\n'.join(fmt))
-
-            out = '\n\n'.join(out)
+            out = format_results(results, pgcli.table_format)
             logger.debug('Results: %r', out)
 
         except psycopg2.Error as e:
@@ -174,6 +174,30 @@ class PgcliNewSqlFileCommand(sublime_plugin.WindowCommand):
         check_pgcli(view)
 
 
+class PgcliNewSublimeReplCommand(sublime_plugin.WindowCommand):
+    def description(self):
+        return 'Open a new pgcli REPL in SublimeREPL'
+
+    def run(self):
+        logger.debug('PgcliNewSublimeRepl')
+        if self.window.active_view():
+            url = get(self.window.active_view(), 'pgcli_url')
+        else:
+            url = settings.get('pgcli_url')
+
+        self.window.run_command('repl_open',
+              {'encoding': 'utf8',
+               'type': 'pgcli',
+               'syntax': 'Packages/SQL/SQL.tmLanguage',
+               'pgcli_url': url})
+
+    def is_enabled(self):
+        return SUBLIME_REPL_AVAIL
+
+    def is_visible(self):
+        return SUBLIME_REPL_AVAIL
+
+
 def init_logging():
 
     for h in logger.handlers:
@@ -192,6 +216,10 @@ def init_logging():
 
 
 def is_sql(view):
+    if view.settings().get('repl'):
+        # pgcli sublime repl has it's own thing
+        return False
+
     syntax_file = view.settings().get('syntax')
     return 'sql' in syntax_file.lower()
 
@@ -297,3 +325,13 @@ def output_panel_name(view):
 
 def get_output_panel(view):
     return view.window().create_output_panel(output_panel_name(view))
+
+
+def format_results(results, table_format):
+    out = []
+
+    for rows, headers, status in results:
+        fmt = format_output(rows, headers, status, table_format)
+        out.append('\n'.join(fmt))
+
+    return '\n\n'.join(out)
