@@ -55,7 +55,7 @@ def plugin_unloaded():
     pgclis = {}
 
     global url_requests
-    url_requests = Queue()
+    url_requests = queue.Queue()
 
 
 class PgcliPlugin(sublime_plugin.EventListener):
