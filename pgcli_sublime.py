@@ -5,11 +5,11 @@ import sys
 import os
 import site
 import traceback
-from queue import Queue
+import queue
 
 pgclis = {}  # Dict mapping urls to pgcli objects
 MONITOR_URL_REQUESTS = False
-url_requests = Queue()  # A queue of database urls to asynchronously connect to
+url_requests = queue.Queue()  # A queue of database urls to asynchronously connect to
 
 logger = logging.getLogger('pgcli_sublime')
 
@@ -247,10 +247,11 @@ def monitor_connection_requests():
     global MONITOR_URL_REQUESTS
 
     while MONITOR_URL_REQUESTS:
-        if url_requests.empty():
-            continue
 
-        url = url_requests.get(block=False)
+        try:
+            url = url_requests.get(block=True, timeout=1)
+        except queue.Empty:
+            continue
 
         if url in pgclis:
             # already connected
