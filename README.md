@@ -12,6 +12,11 @@ Via [Package Control](https://packagecontrol.io/):
 
 Via Git: Clone this repo into a subdirectory in your ST3 /Packages directory.
 
+### Optional
+  -  If you want to run a pgcli postgresql command line prompt directly in Sublime Text, 
+    install the very cool [SublimeREPL](https://github.com/wuub/SublimeREPL) via 
+    Package Control: ```Preferences | Package Control | Install Package | SublimeREPL```
+
 ## Configuration
 
 ### Settings
@@ -94,6 +99,13 @@ Output from the query will be printed to the sublime text console -- Hit
 If you've configured the ```pgcli_system_cmd``` setting, you can open a pgcli
 REPL with the shortcut ```<ctrl-F12>```, or via the menu 
 ```Tools | PgcliSublime | Open command prompt```
+
+### Open pgcli SublimeREPL
+If you have [SublimeREPL](https://github.com/wuub/SublimeREPL) installed,
+```<alt-F12``` or the menu option ```Open a new pgcli REPL in SublimeREPL```
+should open a new tab with a pgcli instance connected to the current database.
+See [SublimeREPL documentation](http://sublimerepl.readthedocs.org/en/latest/)
+for further shortcuts and features. 
 
 
 ## Trouble-shooting
