@@ -6,6 +6,7 @@ import os
 import site
 import traceback
 import queue
+import datetime
 
 pgclis = {}  # Dict mapping urls to pgcli objects
 MONITOR_URL_REQUESTS = False
@@ -107,7 +108,6 @@ class PgcliRunAllCommand(sublime_plugin.TextCommand):
 
         panel = get_output_panel(self.view)
         logger.debug('Command: PgcliExecute: %r', sql)
-        out = ''
 
         try:
             results = pgcli.pgexecute.run(sql)
@@ -122,6 +122,9 @@ class PgcliRunAllCommand(sublime_plugin.TextCommand):
 
         except psycopg2.Error as e:
             out = e.pgerror
+
+        # Prepend datetime
+        out = str(datetime.datetime.now()) + '\n\n' + out
 
         # Write to panel
         panel.run_command('append', {'characters': out, 'pos': 0})
