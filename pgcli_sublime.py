@@ -330,8 +330,8 @@ def get_output_panel(view):
 def format_results(results, table_format):
     out = []
 
-    for rows, headers, status in results:
-        fmt = format_output(rows, headers, status, table_format)
+    for title, cur, headers, status in results:
+        fmt = format_output(title, cur, headers, status, table_format)
         out.append('\n'.join(fmt))
 
     return '\n\n'.join(out)
