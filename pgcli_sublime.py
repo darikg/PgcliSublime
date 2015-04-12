@@ -315,8 +315,8 @@ def monitor_connection_requests():
 
 def pgcli_id(pgcli):
     pge = pgcli.pgexecute
-    user, host = pge.user, pge.host
-    return '{}@{}'.format(user, host)
+    user, host, db = pge.user, pge.host, pge.dbname
+    return '{}@{}/{}'.format(user, host, db)
 
 
 def output_panel_name(view):
