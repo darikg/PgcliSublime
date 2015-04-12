@@ -18,5 +18,9 @@
 	{
 	    "keys":     ["ctrl+alt+shift+n"],
 	    "command":  "pgcli_new_sql_file"
+	},
+    {
+	    "keys":     ["ctrl+alt+shift+c"],
+	    "command":  "pgcli_switch_connection_string"
 	}
 ]

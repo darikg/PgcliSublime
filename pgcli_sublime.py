@@ -17,6 +17,7 @@ except ImportError:
 pgclis = {}  # Dict mapping urls to pgcli objects
 MONITOR_URL_REQUESTS = False
 url_requests = queue.Queue()  # A queue of database urls to asynchronously connect to
+recent_urls = []
 
 logger = logging.getLogger('pgcli_sublime')
 
@@ -97,6 +98,26 @@ class PgcliPlugin(sublime_plugin.EventListener):
 
         return comps, (sublime.INHIBIT_WORD_COMPLETIONS
                         | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+
+
+class PgcliSwitchConnectionStringCommand(sublime_plugin.TextCommand):
+    def description(self):
+        return 'Change the current connection string'
+
+    def run(self, edit):
+
+        recent = set(recent_urls)
+        extra = get(self.view, 'pgcli_urls')
+        urls = list(reversed(recent_urls)) + [
+            u for u in extra if u not in recent]
+
+        def callback(i):
+            if i == -1:
+                return
+            self.view.settings().set('pgcli_url', urls[i])
+            check_pgcli(self.view)
+
+        self.view.window().show_quick_panel(urls, callback)
 
 
 class PgcliRunAllCommand(sublime_plugin.TextCommand):
@@ -300,6 +321,11 @@ def monitor_connection_requests():
 
             logger.debug('Smart completions: %r',
                          pgcli.completer.smart_completion)
+
+            if url in recent_urls:
+                recent_urls.remove(url)
+
+            recent_urls.append(url)
 
         except Exception as e:
             logger.error('Error connecting to pgcli')

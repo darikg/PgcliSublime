@@ -18,5 +18,9 @@
 	{
 		"caption": "Pgcli - Open a new sql file",
 		"command": "pgcli_new_sql_file"
+	},
+    {
+		"caption": "Pgcli - Switch connection string",
+		"command": "pgcli_switch_connection_string"
 	}
 ]

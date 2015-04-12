@@ -11,6 +11,9 @@
 	// The path to the postgresql database. This may also be overridden in project-specific settings
 	"pgcli_url": 					"postgresql://",
 
+	// List of urls to show in the quick-connect menu
+	"pgcli_urls": 					[],
+
 	// The command to send to os.system to open a pgcli command prompt
 	// {url} is automatically formatted with the appropriate database url
 	"pgcli_system_cmd":             "pgcli {url}",
