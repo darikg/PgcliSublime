@@ -142,7 +142,7 @@ class PgcliRunAllCommand(sublime_plugin.TextCommand):
             logger.debug('Results: %r', out)
 
         except psycopg2.Error as e:
-            out = e.pgerror
+            out = e.pgerror or 'No error message'
 
         # Prepend datetime
         out = str(datetime.datetime.now()) + '\n\n' + out
