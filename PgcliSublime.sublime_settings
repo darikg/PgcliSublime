@@ -13,6 +13,10 @@
 
 	// List of urls to show in the quick-connect menu
 	"pgcli_urls": 					[],
+	
+	// Save query to file on run?
+	// 		"always": always save; "never" never save; "success" save if no errors
+	"pgcli_save_on_run_query_mode": "success",
 
 	// The command to send to os.system to open a pgcli command prompt
 	// {url} is automatically formatted with the appropriate database url

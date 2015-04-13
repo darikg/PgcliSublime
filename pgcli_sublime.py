@@ -19,6 +19,7 @@ MONITOR_URL_REQUESTS = False
 url_requests = queue.Queue()  # A queue of database urls to asynchronously connect to
 recent_urls = []
 
+
 logger = logging.getLogger('pgcli_sublime')
 
 
@@ -135,14 +136,20 @@ class PgcliRunAllCommand(sublime_plugin.TextCommand):
 
         panel = get_output_panel(self.view)
         logger.debug('Command: PgcliExecute: %r', sql)
+        save_mode = get(self.view, 'pgcli_save_on_run_query_mode')
 
         try:
             results = pgcli.pgexecute.run(sql)
             out = format_results(results, pgcli.table_format)
             logger.debug('Results: %r', out)
+            if self.view.file_name() and save_mode == 'success':
+                self.view.run_command('save')
 
         except psycopg2.Error as e:
             out = e.pgerror or 'No error message'
+
+        if self.view.file_name() and save_mode == 'always':
+            self.view.run_command('save')
 
         # Prepend datetime
         out = str(datetime.datetime.now()) + '\n\n' + out
