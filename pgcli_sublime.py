@@ -94,7 +94,8 @@ class PgcliPlugin(sublime_plugin.EventListener):
             logger.debug('No completions found')
             return []
 
-        comps = [(comp.text, comp.display) for comp in comps]
+        comps = [('{}\t{}'.format(c.text, c.display_meta), c.display)
+                    for c in comps]
         logger.debug('Found completions: %r', comps)
 
         return comps, (sublime.INHIBIT_WORD_COMPLETIONS
