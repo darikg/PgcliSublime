@@ -305,6 +305,9 @@ def get_entire_view_text(view):
 def monitor_connection_requests():
     global MONITOR_URL_REQUESTS
 
+    settings = sublime.load_settings('PgcliSublime.sublime_settings')
+    pgclirc = settings.get('pgclirc', '~/.pgclirc')
+
     while MONITOR_URL_REQUESTS:
 
         try:
@@ -318,7 +321,7 @@ def monitor_connection_requests():
 
         try:
             logger.debug('Connecting to %r', url)
-            pgcli = PGCli(never_passwd_prompt=True)
+            pgcli = PGCli(never_passwd_prompt=True, pgclirc_file=pgclirc)
             pgcli.connect_uri(url)
             logger.debug('Connected to %r', url)
 

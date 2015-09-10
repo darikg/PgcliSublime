@@ -1,4 +1,7 @@
 {
+    // Location of the pgclirc file
+    "pgclirc":                      "~/.pgclirc",
+
 	// Use pgcli to for autocomplete? If false, standard sublime autocompletion is used
 	"pgcli_autocomplete": 			true,
 	
