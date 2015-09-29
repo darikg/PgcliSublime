@@ -7,6 +7,8 @@ import site
 import traceback
 import queue
 import datetime
+from urllib.parse import urlparse
+from threading import Lock, Thread
 
 try:
     from SublimeREPL.repls import Repl
@@ -14,9 +16,12 @@ try:
 except ImportError:
     SUBLIME_REPL_AVAIL = False
 
-pgclis = {}  # Dict mapping urls to pgcli objects
-MONITOR_URL_REQUESTS = False
-url_requests = queue.Queue()  # A queue of database urls to asynchronously connect to
+completers = {}  # Dict mapping urls to pgcompleter objects
+completer_lock = Lock()
+
+executors = {}  # Dict mapping buffer ids to pgexecutor objects
+executor_lock = Lock()
+
 recent_urls = []
 
 
@@ -43,17 +48,23 @@ def plugin_loaded():
     global PGCli
     from pgcli.main import PGCli
 
+    global PGExecute
+    from pgcli.pgexecute import PGExecute
+
+    global PGCompleter
+    from pgcli.pgcompleter import PGCompleter
+
+    global CompletionRefresher
+    from pgcli.completion_refresher import CompletionRefresher
+
+    global Document
+    from prompt_toolkit.document import Document
+
     global format_output
     from pgcli.main import format_output
 
     global psycopg2
     import psycopg2
-
-    # All database connections are done in a separate thread so sublime doesn't
-    # hang waiting for a connection to timeout or whatever
-    global MONITOR_URL_REQUESTS
-    MONITOR_URL_REQUESTS = True
-    sublime.set_timeout_async(monitor_connection_requests, 0)
 
 
 def plugin_unloaded():
@@ -68,10 +79,13 @@ def plugin_unloaded():
 
 
 class PgcliPlugin(sublime_plugin.EventListener):
-    def on_post_save(self, view):
+    def on_post_save_async(self, view):
         check_pgcli(view)
 
-    def on_activated(self, view):
+    def on_load_async(self, view):
+        check_pgcli(view)
+
+    def on_activated_async(self, view):
         check_pgcli(view)
 
     def on_query_completions(self, view, prefix, locations):
@@ -81,15 +95,23 @@ class PgcliPlugin(sublime_plugin.EventListener):
 
         logger.debug('Searching for completions')
 
-        pgcli = get_pgcli(view)
-        if not pgcli:
+        url = get(view, 'pgcli_url')
+        if not url:
+            return
+
+        with completer_lock:
+            completer = completers.get(url)
+
+        if not completer:
             return
 
         text = get_entire_view_text(view)
         cursor_pos = view.sel()[0].begin()
         logger.debug('Position: %d Text: %r', cursor_pos, text)
 
-        comps = pgcli.get_completions(text, cursor_pos)
+        comps = completer.get_completions(
+            Document(text=text, cursor_position=cursor_pos), None)
+
         if not comps:
             logger.debug('No completions found')
             return []
@@ -117,6 +139,7 @@ class PgcliSwitchConnectionStringCommand(sublime_plugin.TextCommand):
             if i == -1:
                 return
             self.view.settings().set('pgcli_url', urls[i])
+            del self.view.pgcli_executor
             check_pgcli(self.view)
 
         self.view.window().show_quick_panel(urls, callback)
@@ -130,36 +153,11 @@ class PgcliRunAllCommand(sublime_plugin.TextCommand):
         logger.debug('PgcliRunAllCommand')
 
         sql = get_entire_view_text(self.view)
-        pgcli = get_pgcli(self.view)
-
-        if not pgcli:
-            return
-
-        panel = get_output_panel(self.view)
-        logger.debug('Command: PgcliExecute: %r', sql)
-        save_mode = get(self.view, 'pgcli_save_on_run_query_mode')
-
-        try:
-            results = pgcli.pgexecute.run(sql)
-            out = format_results(results, pgcli.table_format)
-            logger.debug('Results: %r', out)
-            if self.view.file_name() and save_mode == 'success':
-                self.view.run_command('save')
-
-        except psycopg2.Error as e:
-            out = e.pgerror or 'No error message'
-
-        if self.view.file_name() and save_mode == 'always':
-            self.view.run_command('save')
-
-        # Prepend datetime
-        out = str(datetime.datetime.now()) + '\n\n' + out
-
-        # Write to panel
-        panel.run_command('append', {'characters': out, 'pos': 0})
-
-        # Make sure the output panel is visiblle
-        sublime.active_window().run_command('pgcli_show_output_panel')
+        t = Thread(target=run_sql_async,
+                   args=(self.view, sql),
+                   name='run_sql_async')
+        t.setDaemon(True)
+        t.start()
 
 
 class PgcliShowOutputPanelCommand(sublime_plugin.TextCommand):
@@ -253,19 +251,6 @@ def is_sql(view):
     return 'sql' in syntax_file.lower()
 
 
-def get_pgcli(view):
-    if not is_sql(view):
-        logger.debug('get_pgcli: View is not sql')
-        return
-
-    url = get(view, 'pgcli_url')
-    if not url:
-        logger.debug('get_pgcli: View URL is empty')
-        return
-
-    return pgclis.get(url)
-
-
 def check_pgcli(view):
     """Check if a pgcli connection for the view exists, or request one"""
 
@@ -273,23 +258,46 @@ def check_pgcli(view):
         view.set_status('pgcli', '')
         return
 
-    url = get(view, 'pgcli_url')
-    if not url:
-        view.set_status('pgcli', '')
-        logger.debug('Empty pgcli url %r', url)
-        return
+    with executor_lock:
+        buffer_id = view.buffer_id()
+        if buffer_id not in executors:
+            url = get(view, 'pgcli_url')
 
-    if url in pgclis:
-        pgcli = pgclis[url]
-        if pgcli is None:
-            view.set_status('pgcli', 'ERROR CONNECTING TO {}'.format(url))
-        else:
-            view.set_status('pgcli', pgcli_id(pgcli))
-            logger.debug('Already connected to %r', url)
-        return
+            if not url:
+                view.set_status('pgcli', '')
+                logger.debug('Empty pgcli url %r', url)
+            else:
+                # Make a new executor connection
+                view.set_status('pgcli', 'Connecting: ' + url)
+                logger.debug('Connecting to %r', url)
 
-    view.set_status('pgcli', 'Connecting: ' + url)
-    url_requests.put(url)
+                try:
+                    executor = new_executor(url)
+                    view.set_status('pgcli', pgcli_id(executor))
+                except Exception as e:
+                    logger.error('Error connecting to pgcli')
+                    logger.error('traceback: %s', traceback.format_exc())
+                    executor = None
+                    status = 'ERROR CONNECTING TO {}'.format(url)
+                    view.set_status('pgcli', status)
+
+                executors[buffer_id] = executor
+
+                # Make sure we have a completer for the corresponding url
+                with completer_lock:
+                    need_new_completer = executor and url not in completers
+                    if need_new_completer:
+                        completers[url] = PGCompleter()  # Empty placeholder
+
+                if need_new_completer:
+                    refresher = CompletionRefresher()
+                    refresher.refresh(executor, special=None, callbacks=(
+                        lambda c: swap_completer(c, url)))
+
+
+def swap_completer(new_completer, url):
+    with completer_lock:
+        completers[url] = new_completer
 
 
 def get(view, key):
@@ -303,56 +311,8 @@ def get_entire_view_text(view):
     return view.substr(sublime.Region(0, view.size()))
 
 
-def monitor_connection_requests():
-    global MONITOR_URL_REQUESTS
-
-    settings = sublime.load_settings('PgcliSublime.sublime_settings')
-    pgclirc = settings.get('pgclirc', '~/.pgclirc')
-
-    while MONITOR_URL_REQUESTS:
-
-        try:
-            url = url_requests.get(block=True, timeout=1)
-        except queue.Empty:
-            continue
-
-        if url in pgclis:
-            # already connected
-            continue
-
-        try:
-            logger.debug('Connecting to %r', url)
-            pgcli = PGCli(never_passwd_prompt=True, pgclirc_file=pgclirc)
-            pgcli.connect_uri(url)
-            logger.debug('Connected to %r', url)
-
-            logger.debug('Refreshing completions')
-            pgcli.refresh_completions()
-            logger.debug('Refreshed completions')
-
-            logger.debug('Smart completions: %r',
-                         pgcli.completer.smart_completion)
-
-            if url in recent_urls:
-                recent_urls.remove(url)
-
-            recent_urls.append(url)
-
-        except Exception as e:
-            logger.error('Error connecting to pgcli')
-            logger.error('traceback: %s', traceback.format_exc())
-            pgcli = None
-
-        pgclis[url] = pgcli
-
-        # Now that we've connected, update status in all open views
-        for view in sublime.active_window().views():
-            check_pgcli(view)
-
-
-def pgcli_id(pgcli):
-    pge = pgcli.pgexecute
-    user, host, db = pge.user, pge.host, pge.dbname
+def pgcli_id(executor):
+    user, host, db = executor.user, executor.host, executor.dbname
     return '{}@{}/{}'.format(user, host, db)
 
 
@@ -372,3 +332,40 @@ def format_results(results, table_format):
         out.append('\n'.join(fmt))
 
     return '\n\n'.join(out)
+
+
+def new_executor(url):
+    uri = urlparse(url)
+    database = uri.path[1:]  # ignore the leading fwd slash
+    dsn = None  # todo: what is this for again
+    return PGExecute(database, uri.username, uri.password, uri.hostname,
+                     uri.port, dsn)
+
+
+def run_sql_async(view, sql):
+    executor = executors[view.buffer_id()]
+    panel = get_output_panel(view)
+    logger.debug('Command: PgcliExecute: %r', sql)
+    save_mode = get(view, 'pgcli_save_on_run_query_mode')
+
+    # Make sure the output panel is visiblle
+    sublime.active_window().run_command('pgcli_show_output_panel')
+
+    try:
+        results = executor.run(sql, pgspecial=None)
+        out = format_results(results, 'psql')
+        logger.debug('Results: %r', out)
+        if view.file_name() and save_mode == 'success':
+            view.run_command('save')
+
+    except psycopg2.Error as e:
+        out = e.pgerror or 'No error message'
+
+    if view.file_name() and save_mode == 'always':
+        view.run_command('save')
+
+    # Prepend datetime
+    out = str(datetime.datetime.now()) + '\n\n' + out
+
+    # Write to panel
+    panel.run_command('append', {'characters': out, 'pos': 0})
