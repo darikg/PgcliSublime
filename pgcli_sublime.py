@@ -66,6 +66,9 @@ def plugin_loaded():
     global psycopg2
     import psycopg2
 
+    global sqlparse
+    import sqlparse
+
 
 def plugin_unloaded():
     global MONITOR_URL_REQUESTS
@@ -151,7 +154,7 @@ class PgcliRunAllCommand(sublime_plugin.TextCommand):
 
     def run(self, edit):
         logger.debug('PgcliRunAllCommand')
-
+        check_pgcli(self.view)
         sql = get_entire_view_text(self.view)
         t = Thread(target=run_sql_async,
                    args=(self.view, sql),
@@ -351,21 +354,19 @@ def run_sql_async(view, sql):
     # Make sure the output panel is visiblle
     sublime.active_window().run_command('pgcli_show_output_panel')
 
-    try:
-        results = executor.run(sql, pgspecial=None)
-        out = format_results(results, 'psql')
+    # Put a leading datetime
+    datestr = str(datetime.datetime.now()) + '\n\n'
+    panel.run_command('append', {'characters': datestr, 'pos': 0})
+
+    # Run each command separately, placing datetimes after each result
+    sql = sqlparse.split(sql)
+    for s in sql:
+        results = executor.run(s, pgspecial=None)
+        out = (format_results(results, 'psql')
+               + '\n\n' + str(datetime.datetime.now()) + '\n\n')
+        panel.run_command('append', {'characters': out})
         logger.debug('Results: %r', out)
-        if view.file_name() and save_mode == 'success':
-            view.run_command('save')
 
-    except psycopg2.Error as e:
-        out = e.pgerror or 'No error message'
-
-    if view.file_name() and save_mode == 'always':
+    if view.file_name() and save_mode in ('success', 'always'):
         view.run_command('save')
 
-    # Prepend datetime
-    out = str(datetime.datetime.now()) + '\n\n' + out
-
-    # Write to panel
-    panel.run_command('append', {'characters': out, 'pos': 0})
