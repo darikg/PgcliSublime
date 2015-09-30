@@ -51,6 +51,9 @@ def plugin_loaded():
     global PGExecute
     from pgcli.pgexecute import PGExecute
 
+    global ON_ERROR_RAISE
+    from pgcli.pgexecute import ON_ERROR_RAISE
+
     global PGCompleter
     from pgcli.pgcompleter import PGCompleter
 
@@ -360,13 +363,28 @@ def run_sql_async(view, sql):
 
     # Run each command separately, placing datetimes after each result
     sql = sqlparse.split(sql)
+    e = None
+
     for s in sql:
-        results = executor.run(s, pgspecial=None)
-        out = (format_results(results, 'psql')
-               + '\n\n' + str(datetime.datetime.now()) + '\n\n')
+        try:
+            results = executor.run(s, pgspecial=None, on_error=ON_ERROR_RAISE)
+        except psycopg2.DatabaseError as e:
+            logger.error("sql: %r, error: %r", s, e)
+            logger.error("traceback: %r", traceback.format_exc())
+            out = str(e)
+        else:
+            out = format_results(results, 'psql')
+
+        out += '\n\n' + str(datetime.datetime.now()) + '\n\n'
         panel.run_command('append', {'characters': out})
         logger.debug('Results: %r', out)
 
-    if view.file_name() and save_mode in ('success', 'always'):
+        if e:
+            # TODO: Support ON_ERROR_RESUME
+            break
+
+    if (view.file_name()
+            and ((save_mode == 'always')
+                 or (save_mode == 'success' and not e))):
         view.run_command('save')
 
