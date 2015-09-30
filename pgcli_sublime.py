@@ -360,31 +360,23 @@ def run_sql_async(view, sql):
     # Put a leading datetime
     datestr = str(datetime.datetime.now()) + '\n\n'
     panel.run_command('append', {'characters': datestr, 'pos': 0})
+    results = executor.run(sql, pgspecial=None, on_error=ON_ERROR_RAISE)
 
-    # Run each command separately, placing datetimes after each result
-    sql = sqlparse.split(sql)
-    e = None
-
-    for s in sql:
-        try:
-            results = executor.run(s, pgspecial=None, on_error=ON_ERROR_RAISE)
-        except psycopg2.DatabaseError as e:
-            logger.error("sql: %r, error: %r", s, e)
-            logger.error("traceback: %r", traceback.format_exc())
-            out = str(e)
-        else:
-            out = format_results(results, 'psql')
-
-        out += '\n\n' + str(datetime.datetime.now()) + '\n\n'
+    try:
+        for (title, cur, headers, status) in results:
+            fmt = format_output(title, cur, headers, status, 'psql')
+            out = ('\n'.join(fmt)
+                   + '\n\n' + str(datetime.datetime.now()) + '\n\n')
+            panel.run_command('append', {'characters': out})
+    except psycopg2.DatabaseError as e:
+        success = False
+        out = str(e) + '\n\n' + str(datetime.datetime.now()) + '\n\n'
         panel.run_command('append', {'characters': out})
-        logger.debug('Results: %r', out)
-
-        if e:
-            # TODO: Support ON_ERROR_RESUME
-            break
+    else:
+        success = True
 
     if (view.file_name()
             and ((save_mode == 'always')
-                 or (save_mode == 'success' and not e))):
+                 or (save_mode == 'success' and success))):
         view.run_command('save')
 
