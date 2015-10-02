@@ -166,6 +166,38 @@ class PgcliRunAllCommand(sublime_plugin.TextCommand):
         t.start()
 
 
+class PgcliRunCurrentCommand(sublime_plugin.TextCommand):
+    def description(self):
+        return 'Run the current selection or line as a query'
+
+    def run(self, edit):
+        logger.debug('PgcliRunCurrentCommand')
+        check_pgcli(self.view)
+
+        # Note that there can be multiple selections
+        sel = self.view.sel()
+        contents = [self.view.substr(reg) for reg in sel]
+        sql = '\n'.join(contents)
+
+        if not sql and len(sel) == 1:
+            # Nothing highlighted - find the current query
+            sql = get_entire_view_text(self.view)
+            split_sql = sqlparse.split(sql)
+            curr_point = sel[0].a
+            cum_len = 0
+
+            for sql in split_sql:
+                cum_len += len(sql)
+                if curr_point <= cum_len:
+                    break
+
+        # Run the sql in a separate thread
+        t = Thread(target=run_sql_async,
+                   args=(self.view, sql),
+                   name='run_sql_async')
+        t.setDaemon(True)
+        t.start()
+
 class PgcliShowOutputPanelCommand(sublime_plugin.TextCommand):
     def description(self):
         return 'Show the output panel'
