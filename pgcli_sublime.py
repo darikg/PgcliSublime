@@ -266,6 +266,11 @@ class PgcliNewSublimeReplCommand(sublime_plugin.WindowCommand):
         return SUBLIME_REPL_AVAIL
 
 
+class PgcliSetScratchCommand(sublime_plugin.WindowCommand):
+    def run(self):
+        self.window.active_view().set_scratch(True)
+
+
 def init_logging():
 
     for h in logger.handlers:
