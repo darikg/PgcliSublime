@@ -91,8 +91,10 @@ class PgcliPlugin(sublime_plugin.EventListener):
     def on_load_async(self, view):
         check_pgcli(view)
 
-    def on_activated_async(self, view):
-        check_pgcli(view)
+    def on_activated(self, view):
+        # This should be on_activated_async, but that's not called correctly
+        # on startup for some reason
+        sublime.set_timeout_async(lambda: check_pgcli(view), 0)
 
     def on_query_completions(self, view, prefix, locations):
 
