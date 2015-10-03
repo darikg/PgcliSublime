@@ -57,6 +57,10 @@ def plugin_loaded():
     global PGCompleter
     from pgcli.pgcompleter import PGCompleter
 
+    global special
+    from pgspecial import PGSpecial
+    special = PGSpecial()
+
     global CompletionRefresher
     from pgcli.completion_refresher import CompletionRefresher
 
@@ -337,7 +341,7 @@ def check_pgcli(view):
 
                 if need_new_completer:
                     refresher = CompletionRefresher()
-                    refresher.refresh(executor, special=None, callbacks=(
+                    refresher.refresh(executor, special=special, callbacks=(
                         lambda c: swap_completer(c, url)))
 
 
@@ -400,7 +404,7 @@ def run_sql_async(view, sql):
     # Put a leading datetime
     datestr = str(datetime.datetime.now()) + '\n\n'
     panel.run_command('append', {'characters': datestr, 'pos': 0})
-    results = executor.run(sql, pgspecial=None, on_error=ON_ERROR_RAISE)
+    results = executor.run(sql, pgspecial=special, on_error=ON_ERROR_RAISE)
 
     try:
         for (title, cur, headers, status) in results:
@@ -425,7 +429,7 @@ def run_sql_async(view, sql):
         logger.debug('Need completions refresh')
         url = get(view, 'pgcli_url')
         refresher = CompletionRefresher()
-        refresher.refresh(executor, special=None, callbacks=(
+        refresher.refresh(executor, special=special, callbacks=(
                           lambda c: swap_completer(c, url)))
 
     # Refresh search_path to set default schema.
