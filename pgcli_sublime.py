@@ -45,8 +45,8 @@ def plugin_loaded():
 
     logger.debug('System path: %r', sys.path)
 
-    global PGCli
-    from pgcli.main import PGCli
+    global PGCli, need_completion_refresh, need_search_path_refresh
+    from pgcli.main import PGCli, need_completion_refresh, need_search_path_refresh
 
     global PGExecute
     from pgcli.pgexecute import PGExecute
@@ -413,4 +413,21 @@ def run_sql_async(view, sql):
             and ((save_mode == 'always')
                  or (save_mode == 'success' and success))):
         view.run_command('save')
+
+    # Refresh the table names and column names if necessary.
+    if need_completion_refresh(sql):
+        logger.debug('Need completions refresh')
+        url = get(view, 'pgcli_url')
+        refresher = CompletionRefresher()
+        refresher.refresh(executor, special=None, callbacks=(
+                          lambda c: swap_completer(c, url)))
+
+    # Refresh search_path to set default schema.
+    if need_search_path_refresh(sql):
+        logger.debug('Refreshing search path')
+        url = get(view, 'pgcli_url')
+
+        with completer_lock:
+            completers[url].set_search_path(executor.search_path())
+            logger.debug('Search path: %r', completers[url].search_path)
 
