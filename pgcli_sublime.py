@@ -238,6 +238,7 @@ class PgcliNewSqlFileCommand(sublime_plugin.WindowCommand):
         self.window.run_command('new_file')
         view = self.window.active_view()
         view.set_syntax_file('Packages/SQL/SQL.tmLanguage')
+        view.set_scratch(True)
         sublime.set_timeout_async(lambda: check_pgcli(view), 0)
 
 
