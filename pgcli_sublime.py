@@ -46,13 +46,10 @@ def plugin_loaded():
     logger.debug('System path: %r', sys.path)
 
     global PGCli, need_completion_refresh, need_search_path_refresh
-    from pgcli.main import PGCli, need_completion_refresh, need_search_path_refresh
+    from pgcli.main import PGCli, has_meta_cmd, has_change_path_cmd
 
     global PGExecute
     from pgcli.pgexecute import PGExecute
-
-    global ON_ERROR_RAISE
-    from pgcli.pgexecute import ON_ERROR_RAISE
 
     global PGCompleter
     from pgcli.pgcompleter import PGCompleter
@@ -404,10 +401,10 @@ def run_sql_async(view, sql):
     # Put a leading datetime
     datestr = str(datetime.datetime.now()) + '\n\n'
     panel.run_command('append', {'characters': datestr, 'pos': 0})
-    results = executor.run(sql, pgspecial=special, on_error=ON_ERROR_RAISE)
+    results = executor.run(sql, pgspecial=special)
 
     try:
-        for (title, cur, headers, status) in results:
+        for (title, cur, headers, status, _, _) in results:
             fmt = format_output(title, cur, headers, status, 'psql')
             out = ('\n'.join(fmt)
                    + '\n\n' + str(datetime.datetime.now()) + '\n\n')
@@ -424,8 +421,9 @@ def run_sql_async(view, sql):
                  or (save_mode == 'success' and success))):
         view.run_command('save')
 
+
     # Refresh the table names and column names if necessary.
-    if need_completion_refresh(sql):
+    if has_meta_cmd(sql):
         logger.debug('Need completions refresh')
         url = get(view, 'pgcli_url')
         refresher = CompletionRefresher()
@@ -433,7 +431,7 @@ def run_sql_async(view, sql):
                           lambda c: swap_completer(c, url)))
 
     # Refresh search_path to set default schema.
-    if need_search_path_refresh(sql):
+    if has_change_path_cmd(sql):
         logger.debug('Refreshing search path')
         url = get(view, 'pgcli_url')
 
