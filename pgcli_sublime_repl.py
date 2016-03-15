@@ -1,4 +1,5 @@
 import logging
+import sublime
 from .pgcli_sublime import format_results
 from time import sleep
 
@@ -9,6 +10,7 @@ except ImportError:
 
 logger = logging.getLogger('pgcli_sublime.repl')
 
+
 class SublimePgcliRepl(Repl):
     TYPE = "pgcli"
 
@@ -18,10 +20,12 @@ class SublimePgcliRepl(Repl):
 
         global psycopg2
         from .pgcli_sublime import PGCli, psycopg2
+        settings = sublime.load_settings('PgcliSublime.sublime_settings')
+        pgclirc = settings.get('pgclirc')
 
         logger.debug('Pgcli url: %r', pgcli_url)
         self.url = pgcli_url
-        self.pgcli = PGCli()
+        self.pgcli = PGCli(pgclirc_file=pgclirc)
         self.pgcli.connect_uri(pgcli_url)
         self.pgcli.refresh_completions()
         self._query = None
