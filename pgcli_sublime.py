@@ -295,8 +295,10 @@ def is_sql(view):
         return False
 
     syntax_file = view.settings().get('syntax')
-    return 'sql' in syntax_file.lower()
-
+    if syntax_file:
+        return 'sql' in syntax_file.lower()
+    else:
+        return False
 
 def check_pgcli(view):
     """Check if a pgcli connection for the view exists, or request one"""
