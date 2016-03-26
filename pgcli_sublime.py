@@ -46,6 +46,7 @@ def plugin_loaded():
     logger.debug('System path: %r', sys.path)
 
     global PGCli, need_completion_refresh, need_search_path_refresh
+    global has_meta_cmd, has_change_path_cmd
     from pgcli.main import PGCli, has_meta_cmd, has_change_path_cmd
 
     global PGExecute
