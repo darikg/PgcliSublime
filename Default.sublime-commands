@@ -3,6 +3,10 @@
 		"caption": "Pgcli - Run all",
 		"command": "pgcli_run_all"
 	},
+	{
+		"caption": "Pgcli - Run current",
+		"command": "pgcli_run_current"
+	},
     {
 		"caption": "Pgcli - Show output panel",
 		"command": "pgcli_show_output_panel"
