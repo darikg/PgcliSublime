@@ -272,12 +272,10 @@ def get_current_query(view):
     text = get_entire_view_text(view)
     cursor_pos = view.sel()[0].begin()
 
-    # remove new lines count from current position
-    newlines_count = len(text[:cursor_pos].split('\n')) - 1
-    cursor_pos = cursor_pos - newlines_count
-
     # Parse sql
-    split_sql = sqlparse.split(text)
+    stack = sqlparse.engine.FilterStack()
+    stack.split_statements = True
+    split_sql = [str(stmt) for stmt in stack.run(text)]
     cum_len = 0
 
     for query in split_sql:
