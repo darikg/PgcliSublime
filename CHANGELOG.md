@@ -1,5 +1,21 @@
 # Change log
 
+## [0.1.7]
+  - Fix bug where run_current_command and autosuggestions were broken in views with multiple queries separated by more than a single whitespace character (Thanks @adnanyaqoobvirk)
+  - Added MIT license
+
+## [0.1.6]
+  - Add pgcli_run_current command to ui and linux and osx keymaps (Thanks @adnanyaqoobvirk)
+
+## [0.1.5]
+  - Fix bug with empty syntax_file views (Thanks @adnanyaqoobvirk)
+  
+## [0.1.4]
+  - Fix broken repl
+
+## [0.1.3]
+  - Major improvements in the threading model. Sublime text no longer hangs while running queries.
+
 ## [0.1.1] - 4/12/2015
   - Show database name in statusbar indentifier
   - Add a command to quickly switch between database connection strings
