@@ -116,9 +116,7 @@ class PgcliPlugin(sublime_plugin.EventListener):
             return
 
         # Get current query
-        current_query = get_current_query(view)
-        text = current_query[0]
-        cursor_pos = current_query[1]
+        text, cursor_pos = get_current_query(view)
         logger.debug('Position: %d Text: %r', cursor_pos, text)
 
         comps = completer.get_completions(
@@ -187,8 +185,7 @@ class PgcliRunCurrentCommand(sublime_plugin.TextCommand):
 
         if not sql and len(sel) == 1:
             # Nothing highlighted - find the current query
-            current_query = get_current_query(self.view)
-            sql = current_query[0]
+            sql, _ = get_current_query(self.view)
 
         # Run the sql in a separate thread
         t = Thread(target=run_sql_async,
@@ -275,18 +272,18 @@ def get_current_query(view):
     # Parse sql
     stack = sqlparse.engine.FilterStack()
     stack.split_statements = True
-    split_sql = [str(stmt) for stmt in stack.run(text)]
     cum_len = 0
-
-    for query in split_sql:
-        cum_len += len(query)
+    current_query = ""
+    for query in stack.run(text):
+        current_query = str(query)
+        cum_len += len(current_query)
         if cursor_pos <= cum_len:
             break
 
     # calculate cursor position in query
-    query_cursor_pos = len(query) - (cum_len - cursor_pos)
+    query_cursor_pos = len(current_query) - (cum_len - cursor_pos)
 
-    return (query, query_cursor_pos)
+    return (current_query, query_cursor_pos)
 
 def init_logging():
 
