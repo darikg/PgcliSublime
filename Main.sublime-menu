@@ -13,7 +13,8 @@
                     {"command": "pgcli_show_output_panel"},
                     {"command": "pgcli_open_cli"},
                     {"command": "pgcli_new_sublime_repl"},
-                    {"command": "pgcli_new_sql_file"}
+                    {"command": "pgcli_new_sql_file"},
+                    {"command": "pgcli_describe_table"}
                 ]
             }
         ]
