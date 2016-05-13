@@ -18,8 +18,9 @@ class SublimePgcliRepl(Repl):
         super(SublimePgcliRepl, self).__init__(encoding,
                                                additional_scopes=['sql'])
 
-        global psycopg2
-        from .pgcli_sublime import PGCli, psycopg2
+        global psycopg2, has_meta_cmd, has_change_db_cmd
+        from .pgcli_sublime import (PGCli, psycopg2, has_meta_cmd,
+                                    has_change_db_cmd)
         settings = sublime.load_settings('PgcliSublime.sublime_settings')
         pgclirc = settings.get('pgclirc')
 
@@ -41,6 +42,13 @@ class SublimePgcliRepl(Repl):
     def prompt(self):
         return '{}> '.format(self.pgcli.pgexecute.dbname)
 
+    def check_refresh(self):
+
+        if has_change_db_cmd(self._query):
+            self.pgcli.refresh_completions(reset=True)
+        elif has_meta_cmd(self._query):
+            self.pgcli.refresh_completions(reset=False)
+
     def read(self):
 
         # Show the initial prompt
@@ -56,11 +64,13 @@ class SublimePgcliRepl(Repl):
         logger.debug('Query: %r', self._query)
 
         try:
-            results = self.pgcli.pgexecute.run(self._query)
+            results = self.pgcli.pgexecute.run(self._query,
+                                               pgspecial=self.pgcli.pgspecial)
             results = format_results(results, self.pgcli.table_format)
         except psycopg2.Error as e:
             results = e.pgerror
         finally:
+            self.check_refresh()
             self._query = None
 
         if results:

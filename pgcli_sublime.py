@@ -46,8 +46,9 @@ def plugin_loaded():
     logger.debug('System path: %r', sys.path)
 
     global PGCli, need_completion_refresh, need_search_path_refresh
-    global has_meta_cmd, has_change_path_cmd
-    from pgcli.main import PGCli, has_meta_cmd, has_change_path_cmd
+    global has_meta_cmd, has_change_path_cmd, has_change_db_cmd
+    from pgcli.main import (PGCli, has_meta_cmd, has_change_path_cmd,
+        has_change_db_cmd)
 
     global PGExecute
     from pgcli.pgexecute import PGExecute
@@ -357,7 +358,7 @@ def check_pgcli(view):
                 try:
                     executor = new_executor(url)
                     view.set_status('pgcli', pgcli_id(executor))
-                except Exception as e:
+                except Exception:
                     logger.error('Error connecting to pgcli')
                     logger.error('traceback: %s', traceback.format_exc())
                     executor = None
