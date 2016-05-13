@@ -26,5 +26,9 @@
     {
 	    "keys":     ["ctrl+alt+shift+c"],
 	    "command":  "pgcli_switch_connection_string"
+	},
+	{
+	    "keys":     ["f1"],
+	    "command": "pgcli_describe_table"
 	}
 ]

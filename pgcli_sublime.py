@@ -163,9 +163,9 @@ class PgcliRunAllCommand(sublime_plugin.TextCommand):
         logger.debug('PgcliRunAllCommand')
         check_pgcli(self.view)
         sql = get_entire_view_text(self.view)
-        t = Thread(target=run_sql_async,
-                   args=(self.view, sql),
-                   name='run_sql_async')
+        t = Thread(target=run_sqls_async,
+                   args=(self.view, [sql]),
+                   name='run_sqls_async')
         t.setDaemon(True)
         t.start()
 
@@ -188,11 +188,32 @@ class PgcliRunCurrentCommand(sublime_plugin.TextCommand):
             sql, _ = get_current_query(self.view)
 
         # Run the sql in a separate thread
-        t = Thread(target=run_sql_async,
-                   args=(self.view, sql),
-                   name='run_sql_async')
+        t = Thread(target=run_sqls_async,
+                   args=(self.view, [sql]),
+                   name='run_sqls_async')
         t.setDaemon(True)
         t.start()
+
+
+class PgcliDescribeTable(sublime_plugin.TextCommand):
+    def description(self):
+        return 'Describe table'
+
+    def run(self, edit):
+        logger.debug('PgcliDescribeTable')
+        check_pgcli(self.view)
+        sel = self.view.sel()
+        tbls = [self.view.substr(reg) for reg in sel]
+        #If there are no selections, use the words the cursors are on
+        if not tbls or not tbls[0]:
+            tbls = [self.view.substr(self.view.word(s)) for s in sel]
+        sqls = ['\\d+ ' + t for t in tbls]
+        t = Thread(target=run_sqls_async,
+               args=(self.view, sqls),
+               name='run_sqls_async')
+        t.setDaemon(True)
+        t.start()
+
 
 class PgcliShowOutputPanelCommand(sublime_plugin.TextCommand):
     def description(self):
@@ -403,21 +424,23 @@ def new_executor(url):
     return PGExecute(database, uri.username, uri.password, uri.hostname,
                      uri.port, dsn)
 
-
-def run_sql_async(view, sql):
-    executor = executors[view.buffer_id()]
+def run_sqls_async(view, sqls):
     panel = get_output_panel(view)
+    for sql in sqls:
+        run_sql_async(view, sql, panel)
+
+
+def run_sql_async(view, sql, panel):
+    executor = executors[view.buffer_id()]
     logger.debug('Command: PgcliExecute: %r', sql)
     save_mode = get(view, 'pgcli_save_on_run_query_mode')
 
     # Make sure the output panel is visiblle
     sublime.active_window().run_command('pgcli_show_output_panel')
-
     # Put a leading datetime
     datestr = str(datetime.datetime.now()) + '\n\n'
     panel.run_command('append', {'characters': datestr, 'pos': 0})
     results = executor.run(sql, pgspecial=special)
-
     try:
         for (title, cur, headers, status, _, _) in results:
             fmt = format_output(title, cur, headers, status, 'psql')
