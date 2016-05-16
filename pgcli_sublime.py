@@ -203,11 +203,12 @@ class PgcliDescribeTable(sublime_plugin.TextCommand):
         logger.debug('PgcliDescribeTable')
         check_pgcli(self.view)
         sel = self.view.sel()
-        tbls = [self.view.substr(reg) for reg in sel]
-        #If there are no selections, use the words the cursors are on
-        if not tbls or not tbls[0]:
-            tbls = [self.view.substr(self.view.word(s)) for s in sel]
-        sqls = ['\\d+ ' + t for t in tbls]
+        if sel and not sel[0].size():
+            # No selection; use words around cursors
+            sel = (self.view.word(s) for s in sel)
+        is_func = lambda region: self.view.substr(region.end()) == '('
+        tbls = ((self.view.substr(reg), is_func(reg)) for reg in sel)
+        sqls = (('\\df+ ' if f else '\\d+ ') + n for n, f in tbls)
         t = Thread(target=run_sqls_async,
                args=(self.view, sqls),
                name='run_sqls_async')
