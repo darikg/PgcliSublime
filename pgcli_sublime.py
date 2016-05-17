@@ -7,6 +7,7 @@ import site
 import traceback
 import queue
 import datetime
+import re
 from urllib.parse import urlparse
 from threading import Lock, Thread
 
@@ -202,10 +203,24 @@ class PgcliDescribeTable(sublime_plugin.TextCommand):
     def run(self, edit):
         logger.debug('PgcliDescribeTable')
         check_pgcli(self.view)
-        sel = self.view.sel()
-        if sel and not sel[0].size():
-            # No selection; use words around cursors
-            sel = (self.view.word(s) for s in sel)
+
+        def fix_region(reg):
+            if reg.size(): # User selected a table/function name
+                word = self.view.substr(reg)
+                par = re.search('\(.*', word)
+                if par: # Strip opening parenthesis and what follows
+                    parlen = par.end() - par.start()
+                    return sublime.Region(reg.begin(), reg.end() - parlen)
+            else: # Selection is just a cursor; expand to nearest word
+                reg = self.view.word(reg)
+                word = self.view.substr(reg)
+                if word in('(', '()', '();'): # Cursor after (; step back
+                    newpos = reg.end() - len(word)
+                    return fix_region(sublime.Region(newpos, newpos))
+
+            return reg
+
+        sel = (fix_region(r) for r in self.view.sel())
         is_func = lambda region: self.view.substr(region.end()) == '('
         tbls = ((self.view.substr(reg), is_func(reg)) for reg in sel)
         sqls = (('\\df+ ' if f else '\\d+ ') + n for n, f in tbls)
