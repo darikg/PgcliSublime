@@ -214,9 +214,18 @@ class PgcliDescribeTable(sublime_plugin.TextCommand):
             else: # Selection is just a cursor; expand to nearest word
                 reg = self.view.word(reg)
                 word = self.view.substr(reg)
-                if word in('(', '()', '();'): # Cursor after (; step back
+                if re.match('\(\)?[;,]?\n?', word):
+                    # Cursor after (; step back
                     newpos = reg.end() - len(word)
                     return fix_region(sublime.Region(newpos, newpos))
+                elif self.view.substr(reg.begin() - 1) == '.':
+                    # schema.table; cursor in table
+                    schema = self.view.word(reg.begin() - 2)
+                    reg = sublime.Region(schema.begin(), reg.end())
+                elif self.view.substr(reg.end()) == '.':
+                    # schema.table; cursor in schema
+                    tbl = self.view.word(reg.end() + 1)
+                    reg = sublime.Region(reg.begin(), tbl.end())
 
             return reg
 
