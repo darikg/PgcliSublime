@@ -7,6 +7,7 @@ import site
 import traceback
 import queue
 import datetime
+import re
 from urllib.parse import urlparse
 from threading import Lock, Thread
 
@@ -203,12 +204,36 @@ class PgcliDescribeTable(sublime_plugin.TextCommand):
     def run(self, edit):
         logger.debug('PgcliDescribeTable')
         check_pgcli(self.view)
-        sel = self.view.sel()
-        tbls = [self.view.substr(reg) for reg in sel]
-        #If there are no selections, use the words the cursors are on
-        if not tbls or not tbls[0]:
-            tbls = [self.view.substr(self.view.word(s)) for s in sel]
-        sqls = ['\\d+ ' + t for t in tbls]
+
+        def fix_region(reg):
+            if reg.size(): # User selected a table/function name
+                word = self.view.substr(reg)
+                par = re.search('\(.*', word)
+                if par: # Strip opening parenthesis and what follows
+                    parlen = par.end() - par.start()
+                    return sublime.Region(reg.begin(), reg.end() - parlen)
+            else: # Selection is just a cursor; expand to nearest word
+                reg = self.view.word(reg)
+                word = self.view.substr(reg)
+                if re.match('\(\)?[;,]?\n?', word):
+                    # Cursor after (; step back
+                    newpos = reg.end() - len(word)
+                    return fix_region(sublime.Region(newpos, newpos))
+                elif self.view.substr(reg.begin() - 1) == '.':
+                    # schema.table; cursor in table
+                    schema = self.view.word(reg.begin() - 2)
+                    reg = sublime.Region(schema.begin(), reg.end())
+                elif self.view.substr(reg.end()) == '.':
+                    # schema.table; cursor in schema
+                    tbl = self.view.word(reg.end() + 1)
+                    reg = sublime.Region(reg.begin(), tbl.end())
+
+            return reg
+
+        sel = (fix_region(r) for r in self.view.sel())
+        is_func = lambda region: self.view.substr(region.end()) == '('
+        tbls = ((self.view.substr(reg), is_func(reg)) for reg in sel)
+        sqls = (('\\df+ ' if f else '\\d+ ') + n for n, f in tbls)
         t = Thread(target=run_sqls_async,
                args=(self.view, sqls),
                name='run_sqls_async')
