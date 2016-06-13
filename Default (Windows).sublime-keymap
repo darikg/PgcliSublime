@@ -1,12 +1,21 @@
 [
-	{
-		"keys": 	["alt+enter"],
-		"command": 	"pgcli_run_all"
-	},
-	{
-		"keys": 	["ctrl+alt+enter"],
-		"command": 	"pgcli_run_current"
-	},
+    {
+        "keys":     ["alt+enter"],
+        "command":  "pgcli_run_all",
+        "context":  [
+                        {"key": "selector", 
+                        "operand": "source.sql"}
+                    ]
+    },
+    {
+        "keys":     ["ctrl+alt+enter"],
+        "command":  "pgcli_run_current",
+        "context":  [
+                        {"key": "selector", 
+                        "operand": "source.sql"}
+                    ]
+
+    },
 	{
 		"keys": 	["alt+`"],
 		"command": 	"pgcli_show_output_panel"
@@ -29,6 +38,10 @@
 	},
 	{
 	    "keys":     ["f1"],
-	    "command": "pgcli_describe_table"
+	    "command": "pgcli_describe_table",
+        "context":  [
+                {"key": "selector", 
+                "operand": "source.sql"}
+            ]
 	}
 ]
