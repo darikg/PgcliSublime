@@ -1,5 +1,10 @@
 # Change log
 
+## [0.1.8]
+  - Add an F1 command to run `\d+` or `\df+` on the table or function next to the cursor (Thanks @koljonen)
+  - Make \special commands work in the SublimeREPL (Thanks @debjan)
+  - Default shortcuts only override Sublime Text defaults in sql files
+
 ## [0.1.7]
   - Fix bug where run_current_command and autosuggestions were broken in views with multiple queries separated by more than a single whitespace character (Thanks @adnanyaqoobvirk)
   - Added MIT license
