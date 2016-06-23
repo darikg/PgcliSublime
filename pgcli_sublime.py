@@ -101,7 +101,11 @@ class PgcliPlugin(sublime_plugin.EventListener):
         sublime.set_timeout_async(lambda: check_pgcli(view), 0)
 
     def on_query_completions(self, view, prefix, locations):
-
+        autocomplete_exclusions = settings.get('autocomplete_exclusions')
+        for pattern in settings.get('autocomplete_exclusions'):
+            if view.file_name() and re.match(pattern, view.file_name()):
+                logger.debug('File excluded from autocompletion')
+                return
         if not get(view, 'pgcli_autocomplete') or not is_sql(view):
             return []
 
