@@ -47,9 +47,9 @@ def plugin_loaded():
     logger.debug('System path: %r', sys.path)
 
     global PGCli, need_completion_refresh, need_search_path_refresh
-    global has_meta_cmd, has_change_path_cmd, has_change_db_cmd
+    global has_meta_cmd, has_change_path_cmd, has_change_db_cmd, OutputSettings
     from pgcli.main import (PGCli, has_meta_cmd, has_change_path_cmd,
-        has_change_db_cmd)
+        has_change_db_cmd, OutputSettings)
 
     global PGExecute
     from pgcli.pgexecute import PGExecute
@@ -471,9 +471,10 @@ def run_sql_async(view, sql, panel):
     datestr = str(datetime.datetime.now()) + '\n\n'
     panel.run_command('append', {'characters': datestr, 'pos': 0})
     results = executor.run(sql, pgspecial=special)
+    settings = OutputSettings('psql', "", "", "NULL", False, None)
     try:
         for (title, cur, headers, status, _, _) in results:
-            fmt = format_output(title, cur, headers, status, 'psql')
+            fmt = format_output(title, cur, headers, status, settings)
             out = ('\n'.join(fmt)
                    + '\n\n' + str(datetime.datetime.now()) + '\n\n')
             panel.run_command('append', {'characters': out})
